@@ -1,0 +1,61 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Set pip environment variables globally for reliability
+ENV PIP_DEFAULT_TIMEOUT=120
+ENV PIP_NO_CACHE_DIR=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    libopenblas-dev \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip first (to avoid older version issues with large downloads)
+RUN pip install --upgrade pip
+
+# Copy requirements file early to leverage Docker caching
+COPY requirements.txt .
+
+# Install CPU-only PyTorch separately to isolate large dependency
+RUN pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining Python dependencies (except we will rebuild llama-cpp for OpenBLAS below)
+RUN pip install -r requirements.txt || true
+
+# Reinstall llama-cpp-python from source with OpenBLAS for maximum CPU performance
+ENV CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_OPENBLAS=ON"
+ENV FORCE_CMAKE=1
+RUN pip uninstall -y llama_cpp_python || true \
+    && pip install --no-binary=:all: llama_cpp_python==0.3.5
+
+# Install spacy individually
+RUN pip install spacy==3.5.0
+
+# Download spaCy English model
+RUN python -m spacy download en_core_web_sm
+
+# Copy all application code
+COPY rag.py main.py document_extractor.py chunk_and_embed.py vector_store.py query_parser.py semantic_search.py decision_llm.py ./
+
+# Prepare directories for volumes (if used)
+RUN mkdir -p /app/data /app/vector_store /app/model
+
+# Expose FastAPI app port
+EXPOSE 8000
+
+# Launch app with Uvicorn
+ENV OMP_NUM_THREADS=8
+ENV OPENBLAS_NUM_THREADS=8
+ENV TOKENIZERS_PARALLELISM=false
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Note: llama_cpp_python requires CMake, NMake, and C/C++ compilers on Windows.
+# If you need it, install Microsoft Build Tools and ensure nmake is in PATH.
