@@ -4,7 +4,7 @@ import json
 from typing import List, Dict, Any
 import re
 
-MODEL_PATH = "model/llama-3.2-1b-instruct-q4_k_m.gguf"
+MODEL_PATH = os.getenv("MODEL_PATH", "model/llama-3.2-1b-instruct-q4_k_m.gguf")
 _llm_instance: Llama | None = None
 _json_grammar: LlamaGrammar | None = None
 

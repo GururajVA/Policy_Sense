@@ -49,6 +49,8 @@ async def upload_document(file: UploadFile = File(...)):
     global vector_store
     if vector_store is None:
         vector_store = VectorStore(embedding_dim)
+    
+    os.makedirs("vector_store", exist_ok=True)
     vector_store.add(embeddings, chunks, metadata)
     vector_store.save("vector_store/index")
     return {"status": "uploaded and indexed", "chunks": len(chunks)}
@@ -108,7 +110,11 @@ async def query_policy(request: Request, query: str | None = Form(default=None))
             })
 
         print(f"Generated response: {decision}")
-        return {"result": decision}
+        try:
+            decision_dict = json.loads(decision)
+        except Exception:
+            decision_dict = decision
+        return {"result": decision_dict}
     except HTTPException:
         raise
     except Exception as e:

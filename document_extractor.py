@@ -21,7 +21,10 @@ def extract_docx_text(file_path):
 def extract_email_text(file_path):
     with open(file_path, "rb") as f:
         msg = BytesParser(policy=policy.default).parse(f)
-    return msg.get_body(preferencelist=('plain')).get_content()
+    body = msg.get_body(preferencelist=('plain'))
+    if body is not None:
+        return body.get_content()
+    return ""
 
 def extract_text(file_path):
     ext = os.path.splitext(file_path)[1].lower()

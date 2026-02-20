@@ -198,7 +198,7 @@ class RAGApplication:
 
 #################### run this file to ingest the new data ####################
 if __name__ == "__main__":
-    MODEL_PATH = 'model/llama-3.2-1b-instruct-q4_k_m.gguf'
+    MODEL_PATH = os.getenv("MODEL_PATH", 'model/llama-3.2-1b-instruct-q4_k_m.gguf')
     
     # Initialize the RAG application
     rag = RAGApplication(model_path=MODEL_PATH)
